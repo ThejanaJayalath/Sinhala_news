@@ -43,7 +43,7 @@ You can override using `ADMIN_EMAIL` and `ADMIN_PASSWORD` (see environment above
 
 ## Next steps
 
-1. Seed the database (admin user, templates, example sources):
+1. Seed the database (templates and example sources only; admin is hardcoded):
 
    - Start dev server: `npm run dev`
    - Call the seed endpoint: `POST http://localhost:3000/api/admin/seed`

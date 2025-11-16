@@ -1,42 +1,15 @@
 import { NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
 import { getDb } from '@/lib/db';
-import { collections, ensureIndexes, type Source, type Template, type User } from '@/lib/models';
+import { collections, ensureIndexes, type Source, type Template } from '@/lib/models';
 
 export async function POST() {
 	try {
 		const db = await getDb();
 		await ensureIndexes(db);
 
-		const { users, templates, sources } = await collections(db);
-
-		// Seed admin user (idempotent)
-		const adminEmail = process.env.ADMIN_EMAIL || 'admin@sinhala.news';
-		const adminPassword = process.env.ADMIN_PASSWORD || 'SinhalaNews#2025';
-		const passwordHash = await bcrypt.hash(adminPassword, 10);
+		const { templates, sources } = await collections(db);
 
 		const now = new Date();
-
-		const adminUser: Omit<User, 'id' | '_id'> = {
-			email: adminEmail,
-			passwordHash,
-			role: 'admin',
-			createdAt: now,
-			updatedAt: now,
-		};
-
-		await users.updateOne(
-			{ email: adminUser.email },
-			{
-				$setOnInsert: { createdAt: adminUser.createdAt },
-				$set: {
-					passwordHash: adminUser.passwordHash,
-					role: adminUser.role,
-					updatedAt: adminUser.updatedAt,
-				},
-			},
-			{ upsert: true },
-		);
 
 		// Seed default templates (idempotent)
 		const defaultTemplates: Array<Omit<Template, 'id' | '_id'>> = [
@@ -127,7 +100,6 @@ export async function POST() {
 		return NextResponse.json({
 			ok: true,
 			seeded: {
-				adminEmail,
 				templates: defaultTemplates.map((t) => t.name),
 				sources: defaultSources.map((s) => s.name),
 			},
