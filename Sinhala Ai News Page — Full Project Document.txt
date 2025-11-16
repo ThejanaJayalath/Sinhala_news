@@ -1,0 +1,275 @@
+Sinhala AI News Page — Full Project Document
+Last updated: November 15, 2025
+
+
+1. Executive Summary
+You will build an AI-powered web/mobile system that automatically collects global and entertainment news, summarizes and translates it into Sinhala, generates branded post images using an AI-driven template pipeline, and schedules/uploads the posts to a Facebook Page. The system must prioritize accuracy, originality (to avoid copyright issues), moderation, and growth/monetization.
+
+This document contains: - Project goals & scope - MVP feature list - System architecture & components - Detailed data model & APIs - AI prompt templates and examples - Content moderation & legal guidance - Monetization options and growth tactics - Deployment, cost estimates, and roadmap - Operational checklist and launch plan
+
+
+2. Goals & Success Criteria
+Primary goal: Launch an automated, high-quality Sinhala news Facebook page that posts daily updates across categories (global news, cinema, comics/anime, tech), with attractive visuals and consistent tone.
+
+Success metrics (first 6 months) - Reach: 100,000 monthly users (impressions) - Followers: 10,000 page likes/follows - Engagement: 1–3% engagement rate (likes/comments/shares) - Monetization: first sponsorship or ad revenue stream established
+
+
+3. Target Audience
+
+• Sinhala-speaking users in Sri Lanka and the global Sinhala diaspora
+• Age groups: 16–40 (primary); 40–60 (secondary)
+• Interests: global news, film/cinema, anime & cartoons, comics/gaming, pop culture
+
+
+4. Scope: MVP vs Phase 2
+MVP (Minimum Viable Product)
+• News ingestion from 3–5 sources (news API + RSS)
+• Automatic summarization and Sinhala translation
+• Generate post text (headline, 2–3 sentence summary, hashtags)
+• Auto-generate image using your template + AI image generator
+
+• Scheduling & posting to Facebook Page (Graph API)
+• Admin dashboard: review & approve posts, simple analytics
+• Basic moderation rules (hate speech / disinformation filters)
+
+Phase 2 / Nice-to-have
+• Mobile app (React Native / Flutter)
+• Deeper personalization / topic preference for followers
+• Multi-platform posting (YouTube shorts, Instagram reels, X threads)
+• Monetization dashboard & sponsor integrations
+• More advanced analytics & A/B test image templates
+
+
+5. Tech Stack Recommendations
+Frontend
+• Web dashboard: React + TypeScript (Next.js optional for SSR)
+• Mobile (Phase 2): React Native or Flutter
+• Styling: Tailwind CSS
+
+Backend
+• Node.js (TypeScript) / Fastify or Express OR Python (FastAPI)
+• Worker queue: BullMQ (Redis) or Celery (if Python)
+• Scheduler: Cron or a dedicated scheduler (Bull repeatable jobs)
+
+AI & External Services
+• LLM (summarization/translation): OpenAI GPT family or Anthropic/Claude
+• Image generation: Stable Diffusion API, Midjourney, or OpenAI image API
+• News ingestion: NewsAPI.org, GDELT, RSS feeds, Reddit/X scraping (with care)
+• Translate fallback: Google Translate API or DeepL (if needed)
+
+Database & Storage
+• Relational DB: Postgres (primary) — posts, users, audits
+• Cache/queue: Redis
+• Blob storage: S3-compatible (DigitalOcean Spaces, AWS S3)
+
+Hosting
+• Backend & Dashboard: Vercel (frontend) + Render / DigitalOcean / AWS for backend
+• Workers: Dockerized containers on ECS, Render, or DigitalOcean App Platform
+
+Monitoring & Analytics
+• Logging: Sentry
+• Metrics: Prometheus + Grafana or SaaS (Datadog)
+
+• Social analytics: built-in Facebook Insights + Google Analytics for website
+
+
+6. System Architecture (high-level)
+1. Ingest Layer: Scheduled crawlers (RSS/NewsAPI) collect articles & metadata.
+2. Preprocessing: Deduplicate, extract lead paragraph, fetch images URLs (if allowed).
+3. AI Pipeline: For each item: summarize ? translate to Sinhala ? generate post text ? create image prompt ? call image generator ? merge with template.
+4. Moderation & Human-in-the-loop: Admin dashboard shows generated posts for approval (MVP: approve all before publish; later: auto-publish for low-risk categories).
+5. Publishing: Post via Facebook Graph API (pages_publish) and store results & insights.
+6. Analytics & Feedback Loop: Track engagement per post to improve prompts and templates.
+
+(Implement all inter-component communication using queues so ingestion, ai-generation, and publishing are decoupled.)
+
+
+7. Data Model (Core tables)
+
+• id, name, type (rss/newsapi/reddit), url, allowed_to_extract_images (bool), last_checked_at
+
+
+• id, source_id, external_id, title, url, content, published_at, fetched_at, language
+
+
+• id, raw_article_id, headline_si, summary_si, tags, image_path, template_id, status (draft/generated/ published), scheduled_at, created_at, published_at, fb_post_id
+
+
+• id, name, layout_json, font_si, headline_area_coords, logo_coords
+
+
+• id, name, role (admin/editor), fb_access_token
+
+
+• id, post_id, result, reason, checked_by_user_id, checked_at
+
+
+• id, post_id, fb_metrics_json, fetched_at
+
+
+8. News Ingestion — Concrete Plan
+1. Priority feeds: NewsAPI (global headlines), selected RSS for entertainment and anime, Reddit r/ anime/r/movies for community buzz.
+2. Dedupe rules: Match by URL or canonical ID; fuzzy title matching if URL missing.
+3. Metadata extraction: Authors, published time, canonical image (only if license permits). If image usage is unclear, do not reuse — prefer AI-generated images.
+4. Frequency: Critical breaking news: poll every 1–5 minutes; categories like anime/cinema: 15–30 min.
+
+
+9. AI Prompts — Templates (use as starting point)
+Important: Keep prompts short & explicit. Add system instructions for consistent Sinhala tone (neutral, clear, slightly conversational for social media).
+
+Summarize & Translate (single-step prompt for cost-efficiency):
+
+Headline-only shorter prompt (if using separate step):
+• "Write a punchy Sinhala headline for social media based on: {title}"
+
+Image-prompt generator template (for image API):
+
+Tone instructions (system):
+• Use neutral, trustworthy Sinhala. Avoid speculation. If uncertain about facts, add: "Source: {source}"
+
+
+10. Image Generation & Template Merge
+Steps
+1. Generate base image from prompt (Stable Diffusion / OpenAI). Use a safe-for-work aesthetic.
+2. Overlay a semi-transparent rectangle at the top/center for the Sinhala headline (use your chosen font).
+3. Add your page logo and small watermark if desired.
+4. Export PNG (1080x1080 for FB feed; 1200x630 for link posts).
+
+Technical options for merging
+
+
+• Node.js:
+
+to composite images & render Sinhala text (use
+
+or a text-to-image
+
+library supporting fonts).
+
+• Python:
+
++
+
+(requires embedding Sinhala fonts).
+
+
+Font & Sinhala rendering
+• Use a reliable Sinhala font (e.g., Noto Sans Sinhala). Ensure server supports complex script rendering (Pango + Cairo or appropriate text shaping library).
+
+
+11. Facebook Posting & API
+
+
+• Use Graph API's
+
+or
+
+endpoints for images and link posts.
+
+• Use long-lived page access tokens (obtain via a user token + exchange to long-lived token).
+• Respect rate limits. Implement retry/backoff and log failures.
+
+Security: never store raw user-level tokens in plaintext; use encrypted secrets (Vault/Env secrets manager).
+
+
+12. Content Moderation & Fact-checking
+Moderation rules (automated):
+• Block explicit sexual content, hate speech, calls for violence.
+• Flag named-entity controversies — pass to human reviewer.
+• Use LLM classifier to detect misinformation risk: if LLM returns "low confidence", route to human-in- loop.
+Human in the loop:
+• Admin dashboard should show flagged posts first.
+• Provide quick edit buttons: regenerate summary, change headline, replace image.
+
+
+13. Legal & Copyright Guidance
+• Text summaries: You can summarize news in your own words — that is generally allowed. Do not reproduce full articles.
+• Images: Avoid republishing copyrighted images without permission. Use AI-generated images or license-free images (Unsplash / Pexels) with care.
+• Attribution: When summarizing, include a short source note (e.g., "Source: BBC"), especially for direct factual claims.
+• Defamation: Avoid unverified accusations about persons; follow conservative content policy.
+
+Consider getting local legal advice before monetizing at scale.
+
+
+14. Monetization Plan (timeline & options)
+1. Phase 0 (0–3 months) - Build audience organically. Focus on quality.
+2. Phase 1 (3–6 months) - Affiliate links (movies, streaming referrals), sponsored posts.
+3. Phase 2 (6–12 months) - Partner with content creators, local businesses; apply for Facebook monetization if audience is eligible (audience location matters).
+4. Other: Launch a website with AdSense; sell premium newsletter; offer promoted posts to local businesses.
+
+
+15. Growth & Marketing Suggestions
+
+• Post frequency: 3–6 posts/day across timezones
+• Use short videos or carousels occasionally — these drive engagement.
+• Cross-post to Telegram/WhatsApp groups for viral reach.
+• Collaborate with Sinhala influencers for shoutouts.
+• Run small-paid FB boosts for top-performing content.
+
+
+16. Analytics & Iteration
+Track per-post: - Impressions, reach - Click-throughs (if link) - Likes, comments, shares - Follower growth
+
+Feed top-performing posts back into prompt tuning: analyze which headlines and image styles perform best and automate template selection.
+
+
+17. Security & Operational Notes
+
+• Rotate tokens monthly.
+• Audit access logs for admin accounts.
+• Rate limit public APIs from your servers to avoid being blacklisted.
+
+
+18. Cost Estimate (monthly, rough)
+
+• Hosting (backend + DB): $20–150 (DigitalOcean / Render small instances)
+• Storage (images): $5–50
+• AI API usage (LLM + image gen): $50–500 depending on scale and model choice
+• Misc (CDN, monitoring): $10–50
+
+Total early-stage monthly estimate: ~$100–$700.
+
+
+19. Roadmap & Milestones (12-week plan)
+Week 1–2: Design data model, choose providers, build skeleton backend + DB.
+
+Week 3–4: Implement ingestion (NewsAPI + RSS) and store raw articles.
+
+Week 5–6: Integrate LLM for summarize+translate. Build admin dashboard to view generated content.
+
+Week 7–8: Add image generation + template merging, implement Sinhala rendering. Week 9–10: Integrate Facebook Graph API posting & scheduling. Add moderation pipeline. Week 11–12: Testing, fix issues, soft-launch page, measure results.
+
+
+20. Operational Checklist (pre-launch)
+
+• [ ] Register Facebook Page and set admin roles
+• [ ] Choose & verify domain (if building site)
+• [ ] Configure FB App & obtain page access token
+• [ ] Provision hosting & DB
+• [ ] Embed Sinhala fonts and test rendering
+• [ ] Build and test posting pipeline (staging)
+• [ ] Prepare 30–50 seeded posts for first week
+• [ ] Set up monitoring & alerts
+
+
+21. Appendix — Example Prompts & Sample Outputs
+Example Article Input
+• Title: "Space agency launches new lunar probe"
+• Excerpt: "The international space agency announced the successful launch..."
+
+Summarize & Translate prompt (example use):
+
+Example Image Prompt (generated):
+
+
+22. Next Steps (what I can do for you right now)
+Tell me which of the following you want me to deliver next (I can create directly): - A ready-to-copy tech spec (detailed endpoints, DB schemas) for the backend. - A set of 10 ready-to-use LLM prompts tuned for Sinhala summaries and moderation. - A complete sequence of Docker + deployment scripts and sample
+for local testing. - A minimal React admin dashboard scaffold (code file) to preview generated
+posts.
+
+Pick one and I will produce it immediately.
+
+
+
+
+

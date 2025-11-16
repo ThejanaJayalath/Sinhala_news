@@ -23,25 +23,31 @@ npm run format:check # Prettier check
 Create a `.env` file (or configure via Vercel) with:
 
 ```
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
-MONGODB_URI=mongodb+srv://todoListApp:sinhalanews@cluster0.gdcsnzk.mongodb.net/
+MONGODB_URI=your-mongodb-connection-string
 MONGODB_DB=sinhalanews
+# Optional: override seeded admin
+# ADMIN_EMAIL=admin@sinhala.news
+# ADMIN_PASSWORD=SinhalaNews#2025
 ```
 
 Additional keys (Facebook Graph, OpenAI) can be added later as new features land.
 
 ### Default admin credentials
 
-Hard-coded for the MVP:
+For now, admin is seeded and can also be configured via env:
 
 - Email: `admin@sinhala.news`
 - Password: `SinhalaNews#2025`
 
-Update `src/lib/auth.ts` when you want to change these values or plug in a real auth provider.
+You can override using `ADMIN_EMAIL` and `ADMIN_PASSWORD` (see environment above).
 
 ## Next steps
 
-1. Wire the login form to your auth provider (Clerk, Auth0, custom).
-2. Implement MongoDB connection utilities and data models.
-3. Add source registry + ingestion job status endpoints.
-4. Expand dashboard widgets to show real metrics from the queue + FB Insights.
+1. Seed the database (admin user, templates, example sources):
+
+   - Start dev server: `npm run dev`
+   - Call the seed endpoint: `POST http://localhost:3000/api/admin/seed`
+
+2. Implement ingestion endpoints and queues.
+3. Add AI pipeline function to generate Sinhala drafts.
+4. Expand dashboard widgets to show queue + FB Insights.

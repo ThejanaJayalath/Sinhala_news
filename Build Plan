@@ -1,0 +1,167 @@
+Build Plan Overview
+
+Purpose: launch an AI-assisted Sinhala Facebook news presence covering global, entertainment, anime/comics, and tech topics with automated ingestion, summarization, image generation, moderation, scheduling, and analytics.
+Drivers: hit 100k monthly impressions, 10k followers, 1–3% engagement, and first monetization stream within six months while staying on $0 infrastructure (Vercel + MongoDB Atlas free tiers).
+
+Users: Sinhala speakers (16–40 core, 40–60 secondary) in Sri Lanka and diaspora; interested in news, cinema, anime, comics, pop culture. Tooling choices favor globally distributed hosting (Vercel) so Sinhala readers in multiple time zones see stable performance.
+Phase Breakdown
+
+Phase 0 Discovery (Week 1–2)
+
+Lock tech stack focused on zero-cost tiers: React + Tailwind (Next.js) frontend/admin hosted on Vercel, serverless Node.js (Fastify handlers wrapped in Vercel functions) for lightweight APIs, MongoDB Atlas free cluster for persistence, and Vercel KV/Edge Config or a lightweight Redis-compatible free tier for transient queues.
+Finalize data model (sources, raw_articles, generated_posts, templates, users, moderation_reviews, fb_metrics).
+Provision infra (repo, environments, DB, storage, monitoring).
+
+Phase 1 Ingestion Foundation (Week 3–4)
+
+Build NewsAPI + RSS connectors; set poll cadence (1–5 min breaking, 15–30 min entertainment).
+Implement dedupe (URL/canonical ID, fuzzy title), metadata extraction, and storage.
+Queue new articles for AI pipeline.
+
+Phase 2 AI Pipeline & Dashboard (Week 5–6)
+
+Summarize and translate via GPT/Claude with Sinhala tone prompts; include source tags.
+Generate Sinhala headlines, summaries, hashtags; enforce moderation instructions.
+Scaffold React admin dashboard (list view, detail view, filters, manual edits).
+Persist generated drafts with status control.
+
+Phase 3 Visuals & Media (Week 7–8)
+
+Design branded templates (layout JSON, font, logo positions).
+Build image prompt generator + Stable Diffusion/OpenAI integration (start with free image credits; fall back to free stock assets if needed).
+Compose images (Node canvas on Vercel serverless or lightweight worker) with Sinhala font rendering (Noto Sans Sinhala).
+Store PNGs (1080x1080 & 1200x630) in Vercel Blob storage or another free S3-compatible bucket (e.g., Cloudflare R2 free tier).
+
+Phase 4 Publishing & Moderation (Week 9–10)
+
+Obtain long-lived Facebook page tokens; implement images/link post endpoints with retry/backoff.
+Add scheduling queue via Vercel cron jobs + Mongo-backed status tracking (fb_post_id, timestamps) and consider lightweight worker (e.g., Railway free tier) if concurrency grows.
+Implement automated moderation (LLM classifier, policy checks) and review workflow in dashboard.
+
+Phase 5 QA & Launch (Week 11–12)
+
+Test end-to-end pipeline in staging; seed 30–50 posts.
+Run operational checklist (FB page setup, domain verification, font rendering tests, monitoring alerts).
+Soft launch, capture analytics, iterate prompts/templates.
+
+Detailed Step List
+
+Project setup (Foundations & Setup):
+1. Repo & workspace
+   - Initialize monorepo (e.g., `apps/web`, `apps/api`) or two repos with shared config.
+   - Configure ESLint + Prettier + TypeScript settings for both frontend (Next.js) and backend (Node serverless functions).
+   - Add Husky/lint-staged hooks for formatting and type checking on commit.
+2. Frontend scaffold
+   - Create Next.js 14 (App Router) project with Tailwind, ShadCN or similar UI kit.
+   - Set up base layout, theme tokens (colors, typography), and reusable components (Button, Card, Badge, Table).
+   - Implement auth shell pages (login form, protected dashboard routes) with placeholder logic.
+3. Backend/serverless scaffold
+   - Configure `/api` routes inside Next.js or a separate Fastify server wrapped as Vercel functions.
+   - Add shared validation/helpers (zod schemas, response wrappers).
+   - Implement health/status endpoint hitting MongoDB to verify connectivity.
+4. MongoDB Atlas setup
+   - Create free-tier cluster, define database + collections, add IP allowlist (0.0.0.0/0 for dev if needed).
+   - Generate connection string; store in Vercel env (`MONGODB_URI`), plus local `.env`.
+   - Add seed script to create admin user and default template placeholders.
+5. DevOps & CI/CD
+   - Link repo to Vercel; configure preview deployments.
+   - Add GitHub Actions/Workflow for lint/test on PRs.
+   - Document environment variable requirements (`README` + `.env.example`).
+6. Design system & branding
+   - Import Sinhala font (Noto Sans Sinhala) for UI previews.
+   - Define color palette, spacing scale, iconography guidelines inside Tailwind config.
+
+Data layer: define migrations for all core tables; seed admin user(s).
+Source onboarding: configure 3–5 reliable feeds, credentials, rate limit guards.
+Article fetcher: cron/queue job to ingest, normalize, dedupe, and enqueue tasks.
+AI processing service:
+
+Prompt templates with tone instructions.
+
+Headline + summary + hashtags + source attribution.
+Sinhala language QA filters.
+Content storage & review:
+Persist drafts, statuses.
+Admin dashboard pages for queue, detail view, quick edits, regenerate actions.
+
+Image pipeline:
+Prompt builder per category.
+Call image API, post-process, template overlay, watermark/logo placement.
+
+Moderation:
+Automated filters (hate, explicit, misinformation confidence scoring).
+Human review priorities; audit trail logging.
+
+Scheduler & publisher:
+Configure BullMQ workers for publishing windows.
+Facebook Graph API integration with token refresh, error logging, retries.
+
+Analytics:
+Pull FB Insights metrics, store in fb_metrics, display charts in dashboard.
+Feedback loop to adjust prompts/template selection.
+
+Security & ops:
+Token rotation, access audits, rate limiting, monitoring alerts (Sentry + Grafana/Datadog).
+Monetization prep:
+Track performance for sponsorship pitches; plan affiliate or boosted posts after initial traction.
+
+
+1. Foundations & Setup
+
+Project skeleton: Initialize monorepo or split frontend/backend repos; add linting, formatting, env handling.
+Environments: Create Vercel project (Next.js), set up MongoDB Atlas free cluster, configure secrets.
+Design standards: Confirm branding (fonts, colors, logo), establish content tone guide.
+
+2. Data Layer & Models
+
+Schema design: Define MongoDB collections (sources, raw_articles, generated_posts, templates, users, moderation_reviews, fb_metrics).
+Migrations/seed scripts: Seed default admin user, template placeholders, sample sources.
+
+3. Ingestion Services
+
+News connectors: Implement NewsAPI + RSS fetchers using Vercel cron/serverless functions.
+Deduplication & storage: Parse, normalize, dedupe by URL/canonical ID; store articles in raw_articles.
+Queueing: Enqueue new articles for AI processing (Mongo status flags + cron triggers).
+
+4. AI Pipeline (Text)
+
+Prompt templates: Finalize Sinhala tone/system instructions for summary, headline, hashtags.
+Processing function: Build serverless handler that fetches raw article → summarizes & translates → writes generated_posts draft.
+Error handling: Retry logic, fallbacks (e.g., shorter prompt if token limit hit).
+
+5. Admin Dashboard (Phase 1 UI)
+
+Auth & roles: Email/password or magic link for admins; store tokens securely.
+Draft list view: Show generated posts, statuses, filters by category/source.
+Detail view & actions: Preview text, edit fields, trigger re-generation, approve/reject.
+
+6. Image Pipeline (MVP)
+
+Template system: Define layout JSON for overlays (headline box, logo positions).
+Image generation: Connect to free-tier image API or placeholder stock; build prompt builder.
+Composition: Node canvas (Vercel function) to add Sinhala text (Noto Sans), watermark, export PNG/WEBP stored in Vercel Blob or free S3-compatible bucket.
+
+7. Moderation & QA
+
+Automated checks: LLM classifier or rules to flag risky content (hate speech, misinformation).
+Review workflow: Dashboard queue for flagged items, audit log collection entries.
+Content guidelines: Embed source attribution, ensure legal/copyright compliance.
+
+8. Scheduling & Publishing
+
+Scheduling UI: Allow manual scheduling or auto slots (3–6 posts/day).
+Queue runner: Vercel cron job polls generated_posts for scheduled_at <= now.
+Facebook integration: OAuth flow for long-lived page token, Graph API calls for posts, retries/backoff.
+
+9. Analytics & Feedback
+
+Metrics ingestion: Pull Facebook Insights per post; store in fb_metrics.
+Dashboard charts: Display reach/engagement trends, best-performing templates.
+Prompt tuning loop: Use metrics to adjust headline/image strategies.
+
+10. Ops, Monitoring, Launch
+
+Observability: Set up Sentry logging, health checks, alerts (email/Slack).
+Security: Token rotation reminders, role-based access, secret management.
+Launch checklist: Seed 30–50 posts, test end-to-end pipeline, schedule soft launch.
+Post-launch: Track performance vs. 100k impressions/10k followers goals, prepare monetization experiments.
