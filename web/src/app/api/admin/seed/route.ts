@@ -54,7 +54,7 @@ export async function POST() {
 			{
 				name: 'Reuters World RSS',
 				type: 'rss',
-				url: 'https://www.reutersagency.com/feed/?best-topics=world&post_type=best',
+				url: 'https://feeds.reuters.com/reuters/worldNews',
 				category: 'global',
 				enabled: true,
 				createdAt: now,

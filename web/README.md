@@ -28,6 +28,8 @@ MONGODB_DB=sinhalanews
 # Optional: override seeded admin
 # ADMIN_EMAIL=admin@sinhala.news
 # ADMIN_PASSWORD=SinhalaNews#2025
+# NewsAPI (optional, for /api/ingest/newsapi)
+# NEWSAPI_KEY=your_newsapi_key
 ```
 
 Additional keys (Facebook Graph, OpenAI) can be added later as new features land.
@@ -51,3 +53,52 @@ You can override using `ADMIN_EMAIL` and `ADMIN_PASSWORD` (see environment above
 2. Implement ingestion endpoints and queues.
 3. Add AI pipeline function to generate Sinhala drafts.
 4. Expand dashboard widgets to show queue + FB Insights.
+
+## Ingestion (RSS)
+
+- List sources:
+  - GET `/api/sources`
+- Add/enable a source:
+  - POST `/api/sources` with JSON:
+    ```
+    { "name": "BBC World RSS", "type": "rss", "url": "https://feeds.bbci.co.uk/news/world/rss.xml", "category": "global", "enabled": true }
+    ```
+- Update/disable a source:
+  - PATCH `/api/sources` with JSON:
+    ```
+    { "name": "Reuters World RSS", "enabled": false }
+    ```
+  - Or update URL:
+    ```
+    { "name": "Reuters World RSS", "url": "https://feeds.reuters.com/reuters/worldNews" }
+    ```
+- Run RSS ingestion:
+  - POST `/api/ingest/rss`
+  - Response contains counts: inserted vs skipped (duplicates)
+
+## Ingestion (NewsAPI)
+
+- Add a NewsAPI source (uses global `NEWSAPI_KEY`):
+  - POST `/api/sources` with JSON:
+    ```
+    { "name": "NewsAPI Global", "type": "newsapi", "category": "global", "enabled": true }
+    ```
+  - Or specify a custom endpoint in `url` (advanced use).
+- Run NewsAPI ingestion:
+  - POST `/api/ingest/newsapi`
+  - Returns `{ ok, sources, inserted, skipped, errors }`
+
+## Automation (Vercel Cron)
+
+Configure scheduled ingestion in `vercel.json`:
+
+```
+{
+  "crons": [
+    { "path": "/api/ingest/rss", "schedule": "*/15 * * * *" },
+    { "path": "/api/ingest/newsapi", "schedule": "*/30 * * * *" }
+  ]
+}
+```
+
+Alternatively trigger from an external scheduler or GitHub Actions curl.

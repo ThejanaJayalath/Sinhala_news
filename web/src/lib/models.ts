@@ -12,6 +12,8 @@ export interface Source {
 	apiKeyRef?: string;
 	category: SourceCategory;
 	enabled: boolean;
+	lastFetchedAt?: Date;
+failureCount?: number;
 	createdAt: Date;
 	updatedAt: Date;
 }
