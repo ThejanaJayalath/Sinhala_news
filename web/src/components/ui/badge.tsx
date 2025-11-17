@@ -3,7 +3,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: 'default' | 'outline' | 'success' | 'warning';
+  variant?: 'default' | 'outline' | 'success' | 'warning' | 'destructive';
 }
 
 const variantStyles: Record<NonNullable<BadgeProps['variant']>, string> = {
@@ -11,6 +11,7 @@ const variantStyles: Record<NonNullable<BadgeProps['variant']>, string> = {
   outline: 'border border-border text-foreground',
   success: 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/40',
   warning: 'bg-amber-500/10 text-amber-600 border border-amber-500/40',
+  destructive: 'bg-red-500/10 text-red-600 border border-red-500/40',
 };
 
 export const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(

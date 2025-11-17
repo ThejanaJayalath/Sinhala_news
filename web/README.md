@@ -30,6 +30,11 @@ MONGODB_DB=sinhalanews
 # ADMIN_PASSWORD=SinhalaNews#2025
 # NewsAPI (optional, for /api/ingest/newsapi)
 # NEWSAPI_KEY=your_newsapi_key
+# OpenAI (Step 4 generation)
+# OPENAI_API_KEY=your_openai_key
+# Local development fallback (no API cost)
+# MOCK_AI=1                  # always generate mock Sinhala text
+# MOCK_AI_FALLBACK=1         # fallback to mock when OpenAI fails/quota
 ```
 
 Additional keys (Facebook Graph, OpenAI) can be added later as new features land.
@@ -102,3 +107,14 @@ Configure scheduled ingestion in `vercel.json`:
 ```
 
 Alternatively trigger from an external scheduler or GitHub Actions curl.
+
+## Generation (Step 4 - Sinhala drafts)
+
+- Configure `OPENAI_API_KEY` in your `.env`.
+- Generate drafts from queued raw articles:
+  - POST `/api/generate/text?limit=10`
+  - Response: `{ ok, processed, created, skipped }`
+  - Creates documents in `generated_posts` with fields: `headlineSi`, `summarySi`, `hashtagsSi`, `status: "draft"`.
+  - Generate for a specific raw article ID:
+    - POST `/api/generate/text?id=<raw_article_id>`
+    - Useful when you want to retry or target a single item.
