@@ -85,7 +85,7 @@ export async function POST(request: Request) {
 			}
 			const one = await rawArticles.findOne(
 				{ _id, status: 'queued' },
-				{ projection: { _id: 1, sourceName: 1, title: 1, url: 1, description: 1, content: 1, publishedAt: 1 } },
+				{ projection: { _id: 1, sourceName: 1, category: 1, title: 1, url: 1, description: 1, content: 1, publishedAt: 1 } },
 			);
 			if (!one) {
 				return NextResponse.json({ ok: false, error: 'raw_article not found or not queued' }, { status: 404 });
@@ -110,6 +110,7 @@ export async function POST(request: Request) {
 						$project: {
 							_id: 1,
 							sourceName: 1,
+							category: 1,
 							title: 1,
 							url: 1,
 							description: 1,
@@ -156,7 +157,7 @@ export async function POST(request: Request) {
 				const now = new Date();
 				const doc: Omit<GeneratedPost, 'id' | '_id'> = {
 					rawArticleId: art._id,
-					category: 'global',
+					category: art.category || 'tech', // Use category from raw article
 					headlineSi: out.headlineSi,
 					summarySi: out.summarySi,
 					hashtagsSi: out.hashtagsSi.slice(0, 5),

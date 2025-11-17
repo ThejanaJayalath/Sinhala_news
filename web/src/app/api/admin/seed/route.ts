@@ -55,7 +55,7 @@ export async function POST() {
 				name: 'Reuters World RSS',
 				type: 'rss',
 				url: 'https://feeds.reuters.com/reuters/worldNews',
-				category: 'global',
+				category: 'tech',
 				enabled: true,
 				createdAt: now,
 				updatedAt: now,

@@ -22,12 +22,14 @@ function buildNewsApiUrl(category: string): string {
 	if (!apiKey) {
 		throw new Error('Missing NEWSAPI_KEY');
 	}
-	// Map categories to top-headlines categories; fallback to general/world-like query
+	// Map categories to top-headlines categories
 	const cat =
 		category === 'tech'
 			? 'technology'
 			: category === 'entertainment'
 			? 'entertainment'
+			: category === 'games'
+			? 'technology' // NewsAPI doesn't have games, use technology as fallback
 			: 'general';
 	const base = new URL('https://newsapi.org/v2/top-headlines');
 	base.searchParams.set('language', 'en');
@@ -41,7 +43,11 @@ export async function POST() {
 	try {
 		const db = await getDb();
 		const { sources, rawArticles } = await collections(db);
-		const enabled = await sources.find({ enabled: true, type: 'newsapi' }).toArray();
+		// Only fetch from allowed categories: tech, entertainment, anime_comics, games
+		const allowedCategories: string[] = ['tech', 'entertainment', 'anime_comics', 'games'];
+		const enabled = await sources
+			.find({ enabled: true, type: 'newsapi', category: { $in: allowedCategories } })
+			.toArray();
 		if (enabled.length === 0) {
 			return NextResponse.json({ ok: true, sources: 0, inserted: 0, skipped: 0 });
 		}
@@ -81,6 +87,7 @@ export async function POST() {
 					const doc: Omit<RawArticle, 'id' | '_id'> = {
 						sourceId: s._id!,
 						sourceName: s.name,
+						category: s.category, // Store category from source
 						title: a.title || link,
 						url: link,
 						canonicalId,
@@ -100,6 +107,7 @@ export async function POST() {
 							$setOnInsert: {
 								sourceId: doc.sourceId,
 								sourceName: doc.sourceName,
+								category: doc.category,
 								title: doc.title,
 								url: doc.url,
 								canonicalId: doc.canonicalId,

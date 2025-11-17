@@ -38,7 +38,11 @@ export async function POST() {
 	try {
 		const db = await getDb();
 		const { sources, rawArticles } = await collections(db);
-		const enabledRss = await sources.find({ enabled: true, type: 'rss' }).toArray();
+		// Only fetch from allowed categories: tech, entertainment, anime_comics, games
+		const allowedCategories: string[] = ['tech', 'entertainment', 'anime_comics', 'games'];
+		const enabledRss = await sources
+			.find({ enabled: true, type: 'rss', category: { $in: allowedCategories } })
+			.toArray();
 		if (enabledRss.length === 0) {
 			return NextResponse.json({ ok: true, sources: 0, inserted: 0, skipped: 0 });
 		}
@@ -98,6 +102,7 @@ export async function POST() {
 				const doc: Omit<RawArticle, 'id' | '_id'> = {
 						sourceId: s._id!,
 						sourceName: s.name,
+						category: s.category, // Store category from source
 						title: item.title || link,
 						url: link,
 						canonicalId,
@@ -117,6 +122,7 @@ export async function POST() {
 							$setOnInsert: {
 								sourceId: doc.sourceId,
 								sourceName: doc.sourceName,
+								category: doc.category,
 								title: doc.title,
 								url: doc.url,
 								canonicalId: doc.canonicalId,

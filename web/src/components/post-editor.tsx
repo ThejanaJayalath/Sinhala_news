@@ -102,10 +102,10 @@ export function PostEditor({ postId, initialData, onSave }: PostEditorProps) {
 					onChange={(e) => setCategory(e.target.value as GeneratedPost['category'])}
 					className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
 				>
-					<option value="global">Global</option>
+					<option value="tech">Tech</option>
 					<option value="entertainment">Entertainment</option>
 					<option value="anime_comics">Anime/Comics</option>
-					<option value="tech">Tech</option>
+					<option value="games">Games</option>
 				</select>
 			</div>
 

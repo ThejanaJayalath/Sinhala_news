@@ -1,7 +1,7 @@
 import { type Collection, type Db, ObjectId } from 'mongodb';
 import { getDb } from './db';
 
-export type SourceCategory = 'global' | 'entertainment' | 'anime_comics' | 'tech';
+export type SourceCategory = 'tech' | 'entertainment' | 'anime_comics' | 'games';
 
 export interface Source {
 	id?: ObjectId;
@@ -23,6 +23,7 @@ export interface RawArticle {
 	_id?: ObjectId;
 	sourceId: ObjectId;
 	sourceName: string;
+	category: SourceCategory; // Category from source
 	title: string;
 	url: string;
 	canonicalId: string; // typically a normalized URL hash
