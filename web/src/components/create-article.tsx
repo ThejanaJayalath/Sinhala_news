@@ -94,13 +94,6 @@ export function CreateArticle() {
           </div>
 
           <div>
-            <h4 className="mb-1 text-xs font-medium text-muted-foreground">Full Article</h4>
-            <div className="whitespace-pre-wrap text-sm leading-relaxed rounded-md border border-border bg-white p-3">
-              {article.contentEn}
-            </div>
-          </div>
-
-          <div>
             <h4 className="mb-1 text-xs font-medium text-muted-foreground">Hashtags</h4>
             <div className="flex flex-wrap gap-2">
               {article.hashtagsEn.map((tag, idx) => (
@@ -115,27 +108,16 @@ export function CreateArticle() {
           </div>
 
           {articleId && (
-            <div className="flex gap-2 pt-2">
+            <div className="pt-2">
               <Button
                 variant="outline"
                 size="sm"
-                className="flex-1"
+                className="w-full"
                 onClick={() => {
                   router.push(`/dashboard/posts/${articleId}`);
                 }}
               >
-                View Full Article
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={() => {
-                  navigator.clipboard.writeText(article.contentEn);
-                  alert('Article content copied to clipboard!');
-                }}
-              >
-                Copy Article
+                View Post
               </Button>
             </div>
           )}

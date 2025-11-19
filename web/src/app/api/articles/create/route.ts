@@ -3,6 +3,7 @@ import { getDb } from '@/lib/db';
 import { collections, type GeneratedPost } from '@/lib/models';
 import { buildEnglishNewsPrompt } from '@/lib/prompt';
 import { ensureArticleContent } from '@/lib/article-fetcher';
+import { generateArticleWithoutAI } from '@/lib/content-summarizer';
 import { ObjectId } from 'mongodb';
 
 export const runtime = 'nodejs';
@@ -55,7 +56,8 @@ async function callOpenAI(system: string, user: string): Promise<GenResult> {
 				{ role: 'system', content: system },
 				{ role: 'user', content: user },
 			],
-			temperature: 0.6,
+			temperature: 0.7, // Slightly higher for more creative summaries
+			max_tokens: 2000, // Increased to ensure full articles are generated
 		}),
 	});
 	if (!res.ok) {
@@ -134,18 +136,81 @@ export async function POST(request: Request) {
 		console.log(`[articles:create] Prompt created with content length: ${fullContent.length}`);
 
 		let out: GenResult;
-		try {
-			out = await callOpenAI(system, user);
-			if (process.env.MOCK_AI === '1') {
-				out = mockGenerate(rawArticle.title, rawArticle.sourceName);
-			}
-		} catch (e: any) {
-			const message = String(e?.message || e);
-			const allowFallback = process.env.MOCK_AI_FALLBACK === '1';
-			if (allowFallback && (message.includes('insufficient_quota') || message.includes('openai_error'))) {
-				out = mockGenerate(rawArticle.title, rawArticle.sourceName);
-			} else {
-				throw e;
+		
+		// Check if we should use AI or content-based generation
+		const useAI = process.env.USE_AI !== '0' && process.env.MOCK_AI !== '1' && process.env.OPENAI_API_KEY;
+		
+		if (!useAI) {
+			// Use content-based generation (no AI)
+			console.log('[articles:create] Using content-based generation (no AI API)');
+			const generated = generateArticleWithoutAI({
+				title: rawArticle.title,
+				description: rawArticle.description || undefined,
+				content: fullContent,
+				sourceName: rawArticle.sourceName,
+				category: rawArticle.category,
+			});
+			out = {
+				headlineEn: generated.headlineEn,
+				summaryEn: generated.summaryEn,
+				contentEn: generated.contentEn,
+				hashtagsEn: generated.hashtagsEn,
+				sourceAttributionEn: generated.sourceAttributionEn,
+			};
+			console.log(`[articles:create] Generated summary: ${out.summaryEn.substring(0, 100)}...`);
+		} else {
+			// Try AI API
+			try {
+				out = await callOpenAI(system, user);
+				// Log the response to debug
+				console.log('[articles:create] AI Response received:');
+				console.log(`  Summary length: ${out.summaryEn.length} chars`);
+				console.log(`  Summary preview: ${out.summaryEn.substring(0, 100)}...`);
+				console.log(`  Content length: ${out.contentEn.length} chars`);
+				
+				// Validate that we didn't get a generic response
+				const genericPhrases = ['check the original source', 'refer to the article', 'check the source', 'for details'];
+				const isGeneric = genericPhrases.some(phrase => 
+					out.summaryEn.toLowerCase().includes(phrase) || 
+					out.contentEn.toLowerCase().includes(phrase)
+				);
+				
+				if (isGeneric && fullContent.length > 1000) {
+					console.warn('[articles:create] WARNING: AI returned generic response. Falling back to content-based generation.');
+					// Fallback to content-based
+					const generated = generateArticleWithoutAI({
+						title: rawArticle.title,
+						description: rawArticle.description || undefined,
+						content: fullContent,
+						sourceName: rawArticle.sourceName,
+						category: rawArticle.category,
+					});
+					out = {
+						headlineEn: generated.headlineEn,
+						summaryEn: generated.summaryEn,
+						contentEn: generated.contentEn,
+						hashtagsEn: generated.hashtagsEn,
+						sourceAttributionEn: generated.sourceAttributionEn,
+					};
+				}
+			} catch (e: any) {
+				const message = String(e?.message || e);
+				console.warn(`[articles:create] AI API failed: ${message}. Using content-based generation instead.`);
+				// Fallback to content-based generation
+				const generated = generateArticleWithoutAI({
+					title: rawArticle.title,
+					description: rawArticle.description || undefined,
+					content: fullContent,
+					sourceName: rawArticle.sourceName,
+					category: rawArticle.category,
+				});
+				out = {
+					headlineEn: generated.headlineEn,
+					summaryEn: generated.summaryEn,
+					contentEn: generated.contentEn,
+					hashtagsEn: generated.hashtagsEn,
+					sourceAttributionEn: generated.sourceAttributionEn,
+				};
 			}
 		}
 

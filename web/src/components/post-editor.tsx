@@ -113,17 +113,6 @@ export function PostEditor({ postId, initialData, onSave }: PostEditorProps) {
 				</div>
 
 				<div>
-					<label className="mb-2 block text-sm font-medium">Full Article</label>
-					<textarea
-						value={contentEn}
-						onChange={(e) => setContentEn(e.target.value)}
-						rows={8}
-						className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 font-mono"
-						placeholder="Complete article content"
-					/>
-				</div>
-
-				<div>
 					<label className="mb-2 block text-sm font-medium">Hashtags (space-separated, start with #)</label>
 					<input
 						type="text"
@@ -157,17 +146,6 @@ export function PostEditor({ postId, initialData, onSave }: PostEditorProps) {
 						rows={3}
 						className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
 						placeholder="Short summary (10-50 words) - Leave empty if not translated yet"
-					/>
-				</div>
-
-				<div>
-					<label className="mb-2 block text-sm font-medium">Full Article (සිංහල)</label>
-					<textarea
-						value={contentSi}
-						onChange={(e) => setContentSi(e.target.value)}
-						rows={8}
-						className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 font-mono"
-						placeholder="Complete article content in Sinhala - Leave empty if not translated yet"
 					/>
 				</div>
 

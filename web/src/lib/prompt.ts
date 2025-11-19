@@ -34,7 +34,7 @@ Return ONLY valid JSON with keys: headlineSi, summarySi (10-50 words), contentSi
 	const article = [
 		`Title: ${title}`,
 		description ? `Description: ${description}` : undefined,
-		content ? `Content: ${content.slice(0, 8000)}` : undefined, // Increased limit for full articles
+		content ? `Content: ${content.slice(0, 12000)}` : undefined, // Increased limit to 12k for full articles
 		`Source: ${sourceName}`,
 		`URL: ${url}`,
 		category ? `Category: ${category}` : undefined,
@@ -87,35 +87,50 @@ Always include source attribution using the source name.
 Return ONLY valid JSON with keys: headlineEn, summaryEn (10-50 words), contentEn (full article), hashtagsEn (array of 5 strings), sourceAttributionEn.
 `;
 
-	const article = [
-		`Title: ${title}`,
-		description ? `Description: ${description}` : undefined,
-		content ? `Content: ${content.slice(0, 8000)}` : undefined, // Increased limit for full articles
-		`Source: ${sourceName}`,
-		`URL: ${url}`,
-		category ? `Category: ${category}` : undefined,
-	]
-		.filter(Boolean)
-		.join('\n');
+	// Format the article content more prominently
+	let articleText = `TITLE: ${title}\n\n`;
+	if (description) {
+		articleText += `DESCRIPTION: ${description}\n\n`;
+	}
+	if (content) {
+		articleText += `═══════════════════════════════════════════════════════════\n`;
+		articleText += `FULL ARTICLE CONTENT (READ THIS CAREFULLY):\n`;
+		articleText += `═══════════════════════════════════════════════════════════\n\n`;
+		articleText += `${content.slice(0, 12000)}\n\n`;
+		articleText += `═══════════════════════════════════════════════════════════\n`;
+	}
+	articleText += `SOURCE: ${sourceName}\n`;
+	articleText += `URL: ${url}\n`;
+	if (category) {
+		articleText += `CATEGORY: ${category}\n`;
+	}
 
 	const user = `
-News Article:
-${article}
+${articleText}
 
-CRITICAL INSTRUCTIONS:
-You MUST read and use the ACTUAL CONTENT provided above. Do NOT generate generic responses like "check the original source" or "refer to the article". 
+🚨 CRITICAL INSTRUCTIONS - READ CAREFULLY 🚨
+You MUST read and use the ACTUAL CONTENT provided above. The "FULL ARTICLE CONTENT" section (marked with ═══) contains the COMPLETE ARTICLE TEXT.
+DO NOT generate generic placeholder responses. DO NOT say "check the original source" or "refer to the article".
+You MUST extract and use REAL INFORMATION from the content to write actual summaries and articles. 
 
 1. READ THE FULL ARTICLE CONTENT CAREFULLY:
-   - The Content section above contains the actual article text
-   - Extract ALL key information, facts, quotes, names, dates, and details
+   - The "FULL ARTICLE CONTENT" section above (between the ═══ lines) contains the complete article text
+   - Read through ALL of it - it has thousands of characters with real information
+   - Extract ALL key information, facts, quotes, names, dates, numbers, statistics, and details
    - If the content is short, use what is provided and expand logically based on the title and description
 
 2. Create a compelling headline (under 80 chars) that accurately represents the main story from the content
 
 3. Write a SHORT summary of 10-50 words that captures the KEY POINTS from the actual article content:
-   - Use specific details from the content
-   - Mention key facts, events, or information from the article
-   - DO NOT say "check the source" - provide actual information
+   ⚠️ THIS IS THE MOST IMPORTANT PART ⚠️
+   - The "FULL ARTICLE CONTENT" section above (between ═══ lines) contains the COMPLETE ARTICLE - read it ALL
+   - Extract SPECIFIC facts, numbers, names, dates, quotes, statistics, percentages, or key events from that content
+   - Write a REAL summary with ACTUAL information extracted from the content - mention specific details
+   - Your summary MUST contain specific details from the article, not generic text
+   - Example of GOOD summary: "Apple's new Wi-Fi chip in iPhone 17 improves speeds by 40% according to Ookla tests, outperforming previous models."
+   - Example of BAD summary: "This news was reported by The Verge. Check the original source for details."
+   - FORBIDDEN PHRASES (DO NOT USE): "check the source", "refer to the article", "check the original source", "for details", "please refer"
+   - If you use any forbidden phrase, you have FAILED. Rewrite with actual information from the content.
 
 4. Write a COMPLETE, DETAILED article in English (300-800 words) based on the content:
    - Start with the most important information from the article

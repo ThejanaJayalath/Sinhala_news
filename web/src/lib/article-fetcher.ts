@@ -1,7 +1,10 @@
 /**
  * Fetches and extracts article content from a URL
- * Uses improved HTML parsing to extract main content
+ * Uses Mozilla Readability for accurate article extraction
  */
+
+import { Readability } from '@mozilla/readability';
+import { JSDOM } from 'jsdom';
 
 export async function fetchArticleContent(url: string): Promise<string | null> {
 	try {
@@ -24,23 +27,51 @@ export async function fetchArticleContent(url: string): Promise<string | null> {
 		const html = await response.text();
 		console.log(`[article-fetcher] Fetched ${html.length} bytes of HTML`);
 		
-		// Try multiple extraction methods
-		let content = extractMainContent(html);
+		// Use Mozilla Readability to extract article content
+		const dom = new JSDOM(html, { url });
+		const reader = new Readability(dom.window.document);
+		const article = reader.parse();
+
+		if (article) {
+			let extractedText = '';
+			
+			// Try to get text from textContent first
+			if (article.textContent && article.textContent.trim().length > 200) {
+				extractedText = article.textContent.trim();
+			}
+			
+			// Also try to extract from article.content (HTML content) which might have more
+			if (article.content) {
+				const dom2 = new JSDOM(article.content);
+				const htmlText = dom2.window.document.body.textContent || '';
+				// Use the longer version
+				if (htmlText.trim().length > extractedText.length) {
+					extractedText = htmlText.trim();
+				}
+			}
+			
+			// If we have article.excerpt, try to combine it
+			if (article.excerpt && article.excerpt.trim().length > 50) {
+				// Prepend excerpt if it's not already in the text
+				if (!extractedText.includes(article.excerpt.trim().substring(0, 50))) {
+					extractedText = article.excerpt.trim() + '\n\n' + extractedText;
+				}
+			}
+			
+			if (extractedText.length > 200) {
+				const content = cleanContent(extractedText);
+				console.log(`[article-fetcher] Successfully extracted ${content.length} chars of content using Readability`);
+				return content;
+			}
+		}
+
+		// Last resort: try basic extraction from common tags
+		console.log(`[article-fetcher] Readability extraction failed, trying fallback extraction`);
+		const fallbackContent = extractFallback(html);
 		
-		if (!content || content.length < 200) {
-			console.log(`[article-fetcher] First extraction got ${content?.length || 0} chars, trying fallback`);
-			content = extractFromCommonTags(html);
-		}
-
-		if (!content || content.length < 200) {
-			console.log(`[article-fetcher] Second extraction got ${content?.length || 0} chars, trying aggressive extraction`);
-			content = extractAggressively(html);
-		}
-
-		if (content && content.length > 200) {
-			// Clean up the content
-			content = cleanContent(content);
-			console.log(`[article-fetcher] Successfully extracted ${content.length} chars of content`);
+		if (fallbackContent && fallbackContent.length > 200) {
+			const content = cleanContent(fallbackContent);
+			console.log(`[article-fetcher] Fallback extraction got ${content.length} chars`);
 			return content;
 		}
 
@@ -52,50 +83,12 @@ export async function fetchArticleContent(url: string): Promise<string | null> {
 	}
 }
 
-function extractMainContent(html: string): string | null {
-	// Try to find article content in common HTML structures
-	const patterns = [
-		/<article[^>]*>([\s\S]*?)<\/article>/i,
-		/<main[^>]*>([\s\S]*?)<\/main>/i,
-		/<div[^>]*class="[^"]*article[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-		/<div[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-		/<div[^>]*class="[^"]*post[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-		/<div[^>]*id="[^"]*article[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-		/<div[^>]*id="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-	];
-
-	for (const pattern of patterns) {
-		const match = html.match(pattern);
-		if (match && match[1]) {
-			const text = stripHtmlTags(match[1]);
-			if (text.length > 200) {
-				return text;
-			}
-		}
-	}
-
-	return null;
-}
-
-function extractFromCommonTags(html: string): string | null {
-	// Extract text from paragraph tags
-	const pMatches = html.match(/<p[^>]*>([\s\S]*?)<\/p>/gi);
-	if (pMatches && pMatches.length > 3) {
-		const paragraphs = pMatches
-			.map(p => stripHtmlTags(p))
-			.filter(p => p.length > 50)
-			.join('\n\n');
-		
-		if (paragraphs.length > 200) {
-			return paragraphs;
-		}
-	}
-
-	return null;
-}
-
-function extractAggressively(html: string): string | null {
-	// Remove scripts, styles, and other non-content elements first
+/**
+ * Fallback extraction method using basic HTML parsing
+ * Only used when Readability fails
+ */
+function extractFallback(html: string): string | null {
+	// Remove scripts, styles, and other non-content elements
 	let cleaned = html
 		.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
 		.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
@@ -105,40 +98,36 @@ function extractAggressively(html: string): string | null {
 		.replace(/<aside[^>]*>[\s\S]*?<\/aside>/gi, '')
 		.replace(/<form[^>]*>[\s\S]*?<\/form>/gi, '');
 
-	// Try to find the largest text block
-	const textBlocks: Array<{ text: string; length: number }> = [];
+	// Try to find article content in common HTML structures
+	const patterns = [
+		/<article[^>]*>([\s\S]*?)<\/article>/i,
+		/<main[^>]*>([\s\S]*?)<\/main>/i,
+		/<div[^>]*class="[^"]*article[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+		/<div[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+		/<div[^>]*class="[^"]*post[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+	];
 
-	// Extract from all divs
-	const divMatches = cleaned.match(/<div[^>]*>([\s\S]*?)<\/div>/gi);
-	if (divMatches) {
-		for (const div of divMatches) {
-			const text = stripHtmlTags(div);
-			if (text.length > 100) {
-				textBlocks.push({ text, length: text.length });
+	for (const pattern of patterns) {
+		const match = cleaned.match(pattern);
+		if (match && match[1]) {
+			const text = stripHtmlTags(match[1]);
+			if (text.length > 200) {
+				return text;
 			}
 		}
 	}
 
-	// Extract from all paragraphs
+	// Extract text from paragraph tags
 	const pMatches = cleaned.match(/<p[^>]*>([\s\S]*?)<\/p>/gi);
-	if (pMatches) {
-		for (const p of pMatches) {
-			const text = stripHtmlTags(p);
-			if (text.length > 50) {
-				textBlocks.push({ text, length: text.length });
-			}
+	if (pMatches && pMatches.length > 3) {
+		const paragraphs = pMatches
+			.map(p => stripHtmlTags(p))
+			.filter(p => p.length > 50)
+			.join('\n\n');
+		
+		if (paragraphs.length > 200) {
+			return paragraphs;
 		}
-	}
-
-	// Sort by length and take the largest blocks
-	textBlocks.sort((a, b) => b.length - a.length);
-	
-	// Combine top blocks
-	const topBlocks = textBlocks.slice(0, 10);
-	const combined = topBlocks.map(b => b.text).join('\n\n');
-	
-	if (combined.length > 200) {
-		return combined;
 	}
 
 	return null;
@@ -164,30 +153,67 @@ function cleanContent(content: string): string {
 		.replace(/\s+/g, ' ')
 		.replace(/\n{3,}/g, '\n\n')
 		.trim()
-		.slice(0, 10000); // Limit to 10k characters
+		.slice(0, 15000); // Increased limit to 15k characters for full articles
 }
 
 /**
  * Checks if we need to fetch content and fetches it if necessary
+ * Real news articles are typically 2000-5000+ characters, so we always try to fetch
+ * if existing content is less than 2000 chars (likely a snippet)
  */
 export async function ensureArticleContent(
 	url: string,
 	existingContent?: string | null,
 	existingDescription?: string | null
 ): Promise<string> {
-	// If we have substantial content (more than 500 chars), use it
-	if (existingContent && existingContent.length > 500 && !existingContent.includes('check the original source')) {
+	// Real articles are typically 2000+ characters. If we have less, it's likely a snippet
+	const MIN_ARTICLE_LENGTH = 2000;
+	const isLikelySnippet = !existingContent || 
+		existingContent.length < MIN_ARTICLE_LENGTH || 
+		existingContent.includes('check the original source') ||
+		existingContent.includes('Read more') ||
+		existingContent.includes('Continue reading');
+
+	// Always try to fetch the full article if content looks like a snippet
+	if (isLikelySnippet) {
+		console.log(`[article-fetcher] Content appears to be a snippet (${existingContent?.length || 0} chars), fetching full article from ${url}`);
+		const fetchedContent = await fetchArticleContent(url);
+		
+		if (fetchedContent && fetchedContent.length > MIN_ARTICLE_LENGTH) {
+			console.log(`[article-fetcher] Successfully fetched full article (${fetchedContent.length} chars)`);
+			return fetchedContent;
+		}
+		
+		// If fetched content is longer than existing, use it even if less than MIN_ARTICLE_LENGTH
+		if (fetchedContent && fetchedContent.length > (existingContent?.length || 0)) {
+			console.log(`[article-fetcher] Using fetched content (${fetchedContent.length} chars) as it's longer than existing (${existingContent?.length || 0} chars)`);
+			return fetchedContent;
+		}
+	} else {
+		// We have substantial content, but still try to fetch to see if we can get better content
+		console.log(`[article-fetcher] Existing content looks substantial (${existingContent.length} chars), but fetching to verify we have the best content`);
+		const fetchedContent = await fetchArticleContent(url);
+		
+		// Prefer fetched content if:
+		// 1. It's significantly longer (at least 30% more), OR
+		// 2. It's longer at all AND existing content might be incomplete (contains snippet indicators)
+		const hasSnippetIndicators = existingContent.includes('...') || 
+			existingContent.includes('[+') || 
+			existingContent.length < 3000; // Articles are usually 3000+ chars
+		
+		if (fetchedContent) {
+			if (fetchedContent.length > existingContent.length * 1.3) {
+				console.log(`[article-fetcher] Fetched content is significantly better (${fetchedContent.length} vs ${existingContent.length} chars), using fetched`);
+				return fetchedContent;
+			} else if (fetchedContent.length > existingContent.length && hasSnippetIndicators) {
+				console.log(`[article-fetcher] Fetched content is longer and existing may be incomplete (${fetchedContent.length} vs ${existingContent.length} chars), using fetched`);
+				return fetchedContent;
+			}
+		}
+		
+		// Use existing if it's good enough
 		console.log(`[article-fetcher] Using existing content (${existingContent.length} chars)`);
 		return existingContent;
-	}
-
-	// Always try to fetch the full article to get better content
-	console.log(`[article-fetcher] Fetching full content from ${url}`);
-	const fetchedContent = await fetchArticleContent(url);
-	
-	if (fetchedContent && fetchedContent.length > 500) {
-		console.log(`[article-fetcher] Successfully fetched ${fetchedContent.length} chars`);
-		return fetchedContent;
 	}
 
 	// If fetch failed but we have some content, use it

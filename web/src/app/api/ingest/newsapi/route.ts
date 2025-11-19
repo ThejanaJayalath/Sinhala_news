@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { collections, type RawArticle } from '@/lib/models';
 import { generateCanonicalId, normalizeUrl } from '@/lib/canonical';
+import { fetchArticleContent } from '@/lib/article-fetcher';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -84,6 +85,28 @@ export async function POST() {
 					}
 					const canonicalId = generateCanonicalId(link);
 					const now = new Date();
+					
+					// News API usually only provides a short snippet in the 'content' field
+					// Try to fetch full article content if the snippet is too short
+					let articleContent = a.content;
+					if (!articleContent || articleContent.length < 500) {
+						// Fetch full content asynchronously (don't wait for it to complete)
+						// This improves content quality without blocking ingestion
+						fetchArticleContent(link).then(fetchedContent => {
+							if (fetchedContent && fetchedContent.length > 500) {
+								// Update the article with fetched content in the background
+								rawArticles.updateOne(
+									{ canonicalId },
+									{ $set: { content: fetchedContent, updatedAt: new Date() } }
+								).catch(err => {
+									console.error(`[ingest:newsapi] Failed to update content for ${link}:`, err);
+								});
+							}
+						}).catch(err => {
+							console.error(`[ingest:newsapi] Failed to fetch content for ${link}:`, err);
+						});
+					}
+					
 					const doc: Omit<RawArticle, 'id' | '_id'> = {
 						sourceId: s._id!,
 						sourceName: s.name,
@@ -94,7 +117,7 @@ export async function POST() {
 						publishedAt: a.publishedAt ? new Date(a.publishedAt) : undefined,
 						author: a.author,
 						description: a.description,
-						content: a.content,
+						content: articleContent, // Will be updated with full content if fetch succeeds
 						imageUrl: a.urlToImage,
 						language: 'en',
 						status: 'queued',

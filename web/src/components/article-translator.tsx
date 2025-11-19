@@ -40,7 +40,13 @@ export function ArticleTranslator() {
         const data = await response.json().catch(() => ({ error: 'Failed to parse response' }));
         
         if (!response.ok || !data.ok) {
-          throw new Error(data.error || `HTTP ${response.status}: Translation failed`);
+          const errorMsg = data.error || `HTTP ${response.status}: Translation failed`;
+          // Friendly message when the article no longer exists
+          if (response.status === 404 || /article not found/i.test(errorMsg)) {
+            alert('Article not found. Make sure the article ID is correct and the post still exists.');
+            return;
+          }
+          throw new Error(errorMsg);
         }
         
         if (data.translations) {

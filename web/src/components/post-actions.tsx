@@ -26,8 +26,13 @@ export function PostActions({ postId, currentStatus, onUpdate }: PostActionsProp
 			});
 			const result = await response.json();
 			if (result.ok) {
-				router.refresh();
-				onUpdate?.();
+				// If deleting, redirect to posts list page to avoid "not found" error
+				if (action === 'delete') {
+					router.push('/dashboard/posts');
+				} else {
+					router.refresh();
+					onUpdate?.();
+				}
 			} else {
 				alert(`Failed: ${result.error || 'Unknown error'}`);
 			}
