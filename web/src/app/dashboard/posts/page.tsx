@@ -17,7 +17,7 @@ export default async function PostsPage({ searchParams }: { searchParams: Promis
   if (params.category) query.category = params.category as SourceCategory;
 
   const posts = await generatedPosts
-    .find(query, { projection: { _id: 1, headlineSi: 1, category: 1, status: 1, createdAt: 1, sourceAttribution: 1 } })
+    .find(query, { projection: { _id: 1, headlineEn: 1, headlineSi: 1, category: 1, status: 1, createdAt: 1, sourceAttributionEn: 1, sourceAttributionSi: 1 } })
     .sort({ createdAt: -1 })
     .limit(50)
     .toArray();
@@ -86,7 +86,7 @@ export default async function PostsPage({ searchParams }: { searchParams: Promis
                       href={`/dashboard/posts/${g._id.toString()}`}
                       className="hover:underline font-medium"
                     >
-                      {g.headlineSi}
+                      {g.headlineSi || g.headlineEn || 'No headline'}
                     </a>
                   </TableCell>
                   <TableCell>

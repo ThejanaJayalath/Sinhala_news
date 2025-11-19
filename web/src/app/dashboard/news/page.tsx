@@ -84,6 +84,7 @@ export default async function NewsPage({ searchParams }: { searchParams: Promise
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>News ID</TableHead>
               <TableHead>Title</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Source</TableHead>
@@ -95,13 +96,16 @@ export default async function NewsPage({ searchParams }: { searchParams: Promise
           <TableBody>
             {latestArticles.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   No articles found. {Object.keys(articleQuery).length > 0 ? 'Try adjusting your filters.' : 'Fetch some news to get started.'}
                 </TableCell>
               </TableRow>
             ) : (
               latestArticles.map((a) => (
                 <TableRow key={a._id.toString()}>
+                  <TableCell className="font-mono text-xs text-muted-foreground">
+                    {a._id.toString()}
+                  </TableCell>
                   <TableCell className="max-w-[360px] truncate">
                     <a href={a.url} target="_blank" rel="noreferrer" className="hover:underline font-medium">
                       {a.title || a.url}

@@ -30,8 +30,17 @@ MONGODB_DB=sinhalanews
 # ADMIN_PASSWORD=SinhalaNews#2025
 # NewsAPI (optional, for /api/ingest/newsapi)
 # NEWSAPI_KEY=your_newsapi_key
-# OpenAI (Step 4 generation)
+# OpenAI (Step 4 generation and translation)
 # OPENAI_API_KEY=your_openai_key
+# Translation APIs (priority order: Google Cloud > Gemini > OpenAI > LibreTranslate > MyMemory)
+# GOOGLE_TRANSLATE_API_KEY=your_google_key  # Best quality, free: 500k chars/month. Get at https://console.cloud.google.com
+# GEMINI_API_KEY=your_gemini_key  # Free tier available, good quality. Get at https://aistudio.google.com
+# GEMINI_MODEL=gemini-1.5-flash  # Optional: default is gemini-1.5-flash (fast) or use gemini-1.5-pro (better quality)
+# OPENAI_API_KEY=your_openai_key  # Paid, requires credits
+# USE_LIBRETRANSLATE=1       # Use LibreTranslate (free) instead of OpenAI for translations
+# LIBRETRANSLATE_API_KEY=your_libretranslate_key  # Get free key at https://portal.libretranslate.com
+# LIBRETRANSLATE_URL=https://libretranslate.com/translate  # Optional: custom LibreTranslate server URL
+# MyMemory is used as automatic fallback (free, 10k words/day, no API key needed)
 # Local development fallback (no API cost)
 # MOCK_AI=1                  # always generate mock Sinhala text
 # MOCK_AI_FALLBACK=1         # fallback to mock when OpenAI fails/quota

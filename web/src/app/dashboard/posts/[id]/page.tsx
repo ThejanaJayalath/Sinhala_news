@@ -61,26 +61,81 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
             <CardDescription>Current content as it appears</CardDescription>
           </CardHeader>
           <div className="space-y-6 p-6 pt-0">
-            <section>
-              <h3 className="mb-2 text-sm font-medium text-muted-foreground">Headline (සිංහල)</h3>
-              <p className="text-2xl font-semibold leading-tight">{post.headlineSi}</p>
-            </section>
+            {/* English Content */}
+            <div className="space-y-4 border-b pb-6">
+              <h2 className="text-lg font-semibold">English Content</h2>
+              <section>
+                <h3 className="mb-2 text-sm font-medium text-muted-foreground">Headline</h3>
+                <p className="text-2xl font-semibold leading-tight">{post.headlineEn || 'No headline'}</p>
+              </section>
 
-            <section>
-              <h3 className="mb-2 text-sm font-medium text-muted-foreground">Summary (සිංහල)</h3>
-              <p className="leading-7">{post.summarySi}</p>
-            </section>
+              <section>
+                <h3 className="mb-2 text-sm font-medium text-muted-foreground">Summary - 10-50 words</h3>
+                <p className="leading-7">{post.summaryEn || 'No summary'}</p>
+              </section>
 
-            <section className="flex flex-wrap gap-2">
-              {post.hashtagsSi?.map((tag: string) => (
-                <Badge key={tag} variant="secondary">
-                  {tag}
-                </Badge>
-              ))}
-            </section>
+              <section>
+                <h3 className="mb-2 text-sm font-medium text-muted-foreground">Full Article</h3>
+                <div className="whitespace-pre-wrap leading-7 rounded-md border border-border bg-muted/30 p-4">
+                  {post.contentEn || 'No article content available'}
+                </div>
+              </section>
 
-            <section className="text-sm text-muted-foreground">
-              <p>{post.sourceAttribution}</p>
+              <section className="flex flex-wrap gap-2">
+                {post.hashtagsEn?.map((tag: string) => (
+                  <Badge key={tag} variant="secondary">
+                    {tag}
+                  </Badge>
+                ))}
+              </section>
+
+              <section className="text-sm text-muted-foreground">
+                <p>{post.sourceAttributionEn || 'No source attribution'}</p>
+              </section>
+            </div>
+
+            {/* Sinhala Content */}
+            {post.headlineSi && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold">Sinhala Content (සිංහල)</h2>
+                <section>
+                  <h3 className="mb-2 text-sm font-medium text-muted-foreground">Headline (සිංහල)</h3>
+                  <p className="text-2xl font-semibold leading-tight">{post.headlineSi}</p>
+                </section>
+
+                <section>
+                  <h3 className="mb-2 text-sm font-medium text-muted-foreground">Summary (සිංහල) - 10-50 words</h3>
+                  <p className="leading-7">{post.summarySi}</p>
+                </section>
+
+                <section>
+                  <h3 className="mb-2 text-sm font-medium text-muted-foreground">Full Article (සිංහල)</h3>
+                  <div className="whitespace-pre-wrap leading-7 rounded-md border border-border bg-muted/30 p-4">
+                    {post.contentSi}
+                  </div>
+                </section>
+
+                <section className="flex flex-wrap gap-2">
+                  {post.hashtagsSi?.map((tag: string) => (
+                    <Badge key={tag} variant="secondary">
+                      {tag}
+                    </Badge>
+                  ))}
+                </section>
+
+                <section className="text-sm text-muted-foreground">
+                  <p>{post.sourceAttributionSi}</p>
+                </section>
+              </div>
+            )}
+
+            {!post.headlineSi && (
+              <div className="rounded-md border border-dashed border-border bg-muted/30 p-4 text-center text-sm text-muted-foreground">
+                Sinhala translation not available. Use the "Translate to Sinhala" option in the Articles tab to translate this article.
+              </div>
+            )}
+
+            <section className="text-sm text-muted-foreground border-t pt-4">
               {raw?.url ? (
                 <p>
                   Source link:{" "}
@@ -98,14 +153,19 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
         <Card>
           <CardHeader>
             <CardTitle>Edit Post</CardTitle>
-            <CardDescription>Modify headline, summary, hashtags, and category</CardDescription>
+            <CardDescription>Modify headline, summary, full article, hashtags, and category</CardDescription>
           </CardHeader>
           <div className="p-6 pt-0">
             <PostEditor
               postId={post._id.toString()}
               initialData={{
-                headlineSi: post.headlineSi,
-                summarySi: post.summarySi,
+                headlineEn: post.headlineEn || '',
+                summaryEn: post.summaryEn || '',
+                contentEn: post.contentEn || '',
+                hashtagsEn: post.hashtagsEn || [],
+                headlineSi: post.headlineSi || '',
+                summarySi: post.summarySi || '',
+                contentSi: post.contentSi || '',
                 hashtagsSi: post.hashtagsSi || [],
                 category: post.category,
               }}

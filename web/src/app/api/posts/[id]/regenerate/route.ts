@@ -9,21 +9,27 @@ export const dynamic = 'force-dynamic';
 
 type GenResult = {
 	headlineSi: string;
-	summarySi: string;
+	summarySi: string; // Short summary (10-50 words)
+	contentSi: string; // Full article content
 	hashtagsSi: string[];
 	sourceAttribution: string;
 };
 
 function mockGenerate(title: string, sourceName: string): GenResult {
 	const baseHeadline = `තත්කාලීන: ${title.slice(0, 60)}`;
-	const summary =
-		`මෙම පුවත ${sourceName} මගින් වාර්තා වේ. ` +
-		`විස්තර සඳහා මුල් ආරංචි මූලාශ්‍රය බලන්න. ` +
-		`මෙය පිරික්සා තහවුරු කළ සාරාංශයකි.`;
+	const summary = `මෙම පුවත ${sourceName} මගින් වාර්තා වේ. විස්තර සඳහා මුල් ආරංචි මූලාශ්‍රය බලන්න.`;
+	const fullArticle = 
+		`${baseHeadline}\n\n` +
+		`මෙම පුවත ${sourceName} මගින් වාර්තා කරන ලදී. ` +
+		`විස්තරාත්මක තොරතුරු සඳහා මුල් ආරංචි මූලාශ්‍රය අධ්‍යයනය කරන්න. ` +
+		`මෙය පිරික්සා තහවුරු කළ සාරාංශයකි. ` +
+		`වැඩි විස්තර සඳහා මුල් මූලාශ්‍රය බලන්න.\n\n` +
+		`මූලාශ්‍රය: ${sourceName}`;
 	const tags = ['#පුවත්', '#දැනගන්න', '#සිංහල', '#ලෝකය', '#තාක්ෂණය'];
 	return {
 		headlineSi: baseHeadline,
 		summarySi: summary,
+		contentSi: fullArticle,
 		hashtagsSi: tags,
 		sourceAttribution: `මූලාශ්‍රය: ${sourceName}`,
 	};
@@ -59,7 +65,7 @@ async function callOpenAI(system: string, user: string): Promise<GenResult> {
 	const text = data?.choices?.[0]?.message?.content;
 	if (!text) throw new Error('openai_empty_response');
 	const parsed = JSON.parse(text) as GenResult;
-	if (!parsed?.headlineSi || !parsed?.summarySi || !Array.isArray(parsed?.hashtagsSi)) {
+	if (!parsed?.headlineSi || !parsed?.summarySi || !parsed?.contentSi || !Array.isArray(parsed?.hashtagsSi)) {
 		throw new Error('openai_invalid_json');
 	}
 	return parsed;
@@ -120,6 +126,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 				$set: {
 					headlineSi: out.headlineSi,
 					summarySi: out.summarySi,
+					contentSi: out.contentSi,
 					hashtagsSi: out.hashtagsSi.slice(0, 5),
 					sourceAttribution: out.sourceAttribution || `මූලාශ්‍රය: ${raw.sourceName}`,
 					status: 'draft',
@@ -128,7 +135,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 			},
 		);
 
-		return NextResponse.json({ ok: true, post: { headlineSi: out.headlineSi, summarySi: out.summarySi, hashtagsSi: out.hashtagsSi } });
+		return NextResponse.json({ ok: true, post: { headlineSi: out.headlineSi, summarySi: out.summarySi, contentSi: out.contentSi, hashtagsSi: out.hashtagsSi } });
 	} catch (error) {
 		console.error('[posts:regenerate]', error);
 		return NextResponse.json({ ok: false, error: 'Failed to regenerate post' }, { status: 500 });

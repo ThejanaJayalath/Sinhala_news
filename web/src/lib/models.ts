@@ -44,10 +44,18 @@ export interface GeneratedPost {
 	_id?: ObjectId;
 	rawArticleId: ObjectId;
 	category: SourceCategory;
-	headlineSi: string;
-	summarySi: string;
-	hashtagsSi: string[];
-	sourceAttribution: string;
+	// English content (created first)
+	headlineEn: string;
+	summaryEn: string; // Short summary (10-50 words)
+	contentEn: string; // Full article content
+	hashtagsEn: string[];
+	sourceAttributionEn: string;
+	// Sinhala content (translated later)
+	headlineSi?: string;
+	summarySi?: string; // Short summary (10-50 words)
+	contentSi?: string; // Full article content
+	hashtagsSi?: string[];
+	sourceAttributionSi?: string;
 	imageAssetUrl?: string; // composed image URL
 	status: 'draft' | 'approved' | 'rejected' | 'scheduled' | 'published';
 	scheduledAt?: Date;

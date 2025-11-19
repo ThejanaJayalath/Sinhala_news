@@ -38,8 +38,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 		}
 		const _id = new ObjectId(hex);
 		const body = (await request.json()) as {
+			headlineEn?: string;
+			summaryEn?: string;
+			contentEn?: string;
+			hashtagsEn?: string[];
 			headlineSi?: string;
 			summarySi?: string;
+			contentSi?: string;
 			hashtagsSi?: string[];
 			status?: GeneratedPost['status'];
 			category?: SourceCategory;
@@ -51,8 +56,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 		const now = new Date();
 		const update: Record<string, unknown> = { updatedAt: now };
 
+		if (typeof body.headlineEn === 'string') update.headlineEn = body.headlineEn;
+		if (typeof body.summaryEn === 'string') update.summaryEn = body.summaryEn;
+		if (typeof body.contentEn === 'string') update.contentEn = body.contentEn;
+		if (Array.isArray(body.hashtagsEn)) update.hashtagsEn = body.hashtagsEn;
 		if (typeof body.headlineSi === 'string') update.headlineSi = body.headlineSi;
 		if (typeof body.summarySi === 'string') update.summarySi = body.summarySi;
+		if (typeof body.contentSi === 'string') update.contentSi = body.contentSi;
 		if (Array.isArray(body.hashtagsSi)) update.hashtagsSi = body.hashtagsSi;
 		if (typeof body.status === 'string') update.status = body.status;
 		if (typeof body.category === 'string') update.category = body.category;
