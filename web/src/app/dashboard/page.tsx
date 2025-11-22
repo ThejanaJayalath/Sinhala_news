@@ -21,32 +21,50 @@ const notifications = [
 ];
 
 export default async function DashboardPage() {
-  const db = await getDb();
-  const { rawArticles, generatedPosts } = await collections(db);
+  let articleStats: any[] = [];
+  let postStats: any[] = [];
+  let latestArticles: any[] = [];
+  let latestPosts: any[] = [];
+  let dbError: string | null = null;
 
-  const articleStats = await rawArticles
-    .aggregate([
-      { $group: { _id: '$category', count: { $sum: 1 } } }
-    ])
-    .toArray();
+  try {
+    const db = await getDb();
+    const { rawArticles, generatedPosts } = await collections(db);
 
-  const postStats = await generatedPosts
-    .aggregate([
-      { $group: { _id: '$status', count: { $sum: 1 } } }
-    ])
-    .toArray();
+    articleStats = await rawArticles
+      .aggregate([
+        { $group: { _id: '$category', count: { $sum: 1 } } }
+      ])
+      .toArray();
 
-  const latestArticles = await rawArticles
-    .find({}, { projection: { _id: 1, title: 1, category: 1 } })
-    .sort({ createdAt: -1 })
-    .limit(5)
-    .toArray();
+    postStats = await generatedPosts
+      .aggregate([
+        { $group: { _id: '$status', count: { $sum: 1 } } }
+      ])
+      .toArray();
 
-  const latestPosts = await generatedPosts
-    .find({}, { projection: { _id: 1, headlineSi: 1, status: 1 } })
-    .sort({ createdAt: -1 })
-    .limit(5)
-    .toArray();
+    latestArticles = await rawArticles
+      .find({}, { projection: { _id: 1, title: 1, category: 1 } })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .toArray();
+
+    latestPosts = await generatedPosts
+      .find({}, { projection: { _id: 1, headlineSi: 1, status: 1 } })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .toArray();
+  } catch (error: any) {
+    console.error('[dashboard] Database connection error:', error);
+    const errorMsg = error?.message || String(error);
+    
+    // Check for common MongoDB connection errors
+    if (errorMsg.includes('ENOTFOUND') || errorMsg.includes('SSL') || errorMsg.includes('TLS')) {
+      dbError = 'MongoDB connection failed. Please check: 1) MongoDB Atlas cluster is running, 2) Your IP is whitelisted in Network Access, 3) Connection string is correct.';
+    } else {
+      dbError = `Database error: ${errorMsg}`;
+    }
+  }
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900">
@@ -60,6 +78,15 @@ export default async function DashboardPage() {
       <div className="fixed inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
 
       <div className="relative mx-auto flex w-full max-w-content flex-col gap-8 px-4 py-12">
+        {dbError && (
+          <div className="rounded-lg border border-red-500/50 bg-red-500/10 p-4 text-red-200">
+            <h3 className="mb-2 font-semibold">⚠️ Database Connection Error</h3>
+            <p className="text-sm">{dbError}</p>
+            <p className="mt-2 text-xs text-red-300">
+              <strong>Quick Fix:</strong> Go to MongoDB Atlas → Network Access → Add your current IP address (or use 0.0.0.0/0 for testing).
+            </p>
+          </div>
+        )}
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/10 px-3 py-1 backdrop-blur-sm">

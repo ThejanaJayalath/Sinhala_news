@@ -8,11 +8,34 @@ if (!uri) {
 }
 
 let dbPromise: Promise<Db>;
+let client: MongoClient | null = null;
 
 export const getDb = (): Promise<Db> => {
   if (!dbPromise) {
-    const client = new MongoClient(uri);
-    dbPromise = client.connect().then((connectedClient) => connectedClient.db(dbName));
+    // Add SSL/TLS options to handle connection issues
+    const clientOptions = {
+      // Ensure SSL is enabled for mongodb+srv connections
+      tls: true,
+      tlsAllowInvalidCertificates: false,
+      // Connection timeout
+      serverSelectionTimeoutMS: 10000,
+      // Retry options
+      retryWrites: true,
+    };
+    
+    client = new MongoClient(uri, clientOptions);
+    dbPromise = client.connect()
+      .then((connectedClient) => {
+        console.log('[db] Successfully connected to MongoDB');
+        return connectedClient.db(dbName);
+      })
+      .catch((error) => {
+        console.error('[db] MongoDB connection error:', error);
+        // Reset promise on error so it can retry
+        dbPromise = undefined as any;
+        client = null;
+        throw error;
+      });
   }
   return dbPromise;
 };
